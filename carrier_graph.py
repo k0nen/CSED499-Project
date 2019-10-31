@@ -119,7 +119,7 @@ def carrier_graph(rectangles):
 
 
 if __name__ == '__main__':
-	Vd = carrier_graph([(1, 2, 3, 4), (3, 4, 2, 5), (5, 6, 1, 3.5)])
+	Vd = carrier_graph([(1, 2, 3, 5), (3, 4, 2, 6), (5, 7, 1, 4)])
 	for x1, y1 in Vd.keys():
 		for x2, y2 in Vd[(x1, y1)]:
 			plt.plot([x1, x2], [y1, y2])
