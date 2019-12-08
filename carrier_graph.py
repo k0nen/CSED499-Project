@@ -1,6 +1,4 @@
-# Input: List of rectangles (l, r, d, u)
-# Output: Carrier graph G_x+
-
+import heapq
 import matplotlib.pyplot as plt
 
 
@@ -15,6 +13,8 @@ def add_rectangle(V, E, l, r, d, u):
 	E.add((l, u, r, u))
 
 
+# Input: List of rectangles (l, r, d, u)
+# Output: Carrier graph G_x+
 def carrier_graph(rectangles):
 	V, E = set(), set()
 
@@ -95,31 +95,60 @@ def carrier_graph(rectangles):
 	Vd = {}
 	for x, y in V:
 		Vd[(x, y)] = set()
+	# Vertical edge
 	for x1, y1, x2, y2 in E:
-		if y1 == y2:
-			# Horizontal edge
-			assert x1 < x2
-			Vd[(x1, y1)].add((x2, y2))
-		elif x1 == x2:
+		if x1 == x2:
 			# Vertical edge
 			assert y1 < y2
-			if (x1 + 0.1, y1) not in Vd.keys():
-				Vd[(x1 + 0.1, y1)] = set()
-			if (x1 + 0.1, y2) not in Vd.keys():
-				Vd[(x1 + 0.1, y2)] = set()
+			if (x1 + 1/16, y1) not in Vd.keys():
+				Vd[(x1 + 1/16, y1)] = set()
+			if (x1 + 1/16, y2) not in Vd.keys():
+				Vd[(x1 + 1/16, y2)] = set()
 
 			Vd[(x1, y2)].add((x1, y1))
-			Vd[(x1, y1)].add((x1 + 0.1, y1))
-			Vd[(x1, y2)].add((x1 + 0.1, y2))
-			Vd[(x1 + 0.1, y2)].add((x1 + 0.1, y1))
-		else:
+			Vd[(x1, y1)].add((x1 + 1/16, y1))
+			Vd[(x1, y2)].add((x1 + 1/16, y2))
+			Vd[(x1 + 1/16, y1)].add((x1 + 1/16, y2))
+	# Horizontal edge
+	for x1, y1, x2, y2 in E:
+		if y1 == y2:
+			assert x1 < x2
+			Vd[(x1 + 1/16, y1)].add((x2, y2))
+		elif x1 != x2:
 			assert False, 'Edge in E is not axis-parallel'
 
 	return Vd
 
 
+# Input: Carrier graph, src/dst points
+# Output: Min distance, None if unreachable
+def query(graph, src, dst):
+	def dist(_x, _y):
+		_a, _b = _x
+		_c, _d = _y
+		return abs(_a - _c) + abs(_b - _d)
+
+	distances = {p: float('inf') for p in graph.keys()}
+	queue = [(0, src)]
+
+	while len(queue) > 0:
+		d, p = heapq.heappop(queue)
+		p1, p2 = p
+		print(p, d, queue)
+		if (p1, p2) == dst or (p1 - 1/16, p2) == dst:
+			return d - (1/16 if int(p1) != p1 else 0)
+		for a in graph[p]:
+			if d + dist(p, a) < distances[a]:
+				distances[a] = d + dist(p, a)
+				heapq.heappush(queue, (distances[a], a))
+	return None
+
+
 if __name__ == '__main__':
 	Vd = carrier_graph([(1, 2, 3, 5), (3, 4, 2, 6), (5, 7, 1, 4)])
+	print(Vd[(2, 5)])
+	print(query(Vd, (1, 5), (7, 4)))
+
 	for x1, y1 in Vd.keys():
 		for x2, y2 in Vd[(x1, y1)]:
 			plt.plot([x1, x2], [y1, y2])

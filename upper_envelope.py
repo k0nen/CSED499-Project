@@ -1,7 +1,4 @@
-# Input: n segments of slope 1, -1, 0 each (x1, y1, x2, y2)
-# Output: Upper envelope
-
-import queue
+import heapq
 import matplotlib.pyplot as plt
 
 
@@ -70,21 +67,23 @@ class BST:
 		return None if len(self.tree) == 0 else self.tree[-1]
 
 
+# Input: n segments of slope 1, -1, 0 each (x1, y1, x2, y2)
+# Output: Upper envelope
 def upper_envelope(lines):
-	event_queue = queue.PriorityQueue()
+	event_queue = []
 	lines = [[float(i) for i in j] for j in lines]
 	tree = BST()
 	top_list = []
 
 	# Create begin/end events
 	for x1, y1, x2, y2 in lines:
-		event_queue.put((x1, y1, 0, (x1, y1, x2, y2)))
-		event_queue.put((x2, y2, 2, (x1, y1, x2, y2)))
+		heapq.heappush(event_queue, (x1, y1, 0, (x1, y1, x2, y2)))
+		heapq.heappush(event_queue, (x2, y2, 2, (x1, y1, x2, y2)))
 
 	last_x = -100
 
-	while event_queue.qsize() > 0:
-		x, y, event, val = event_queue.get()
+	while len(event_queue) > 0:
+		x, y, event, val = heapq.heappop(event_queue)
 		print(f'Event: ({x}, {y}), type {event}, {val} {tree.tree}')
 
 		if event == 0:  # Begin
@@ -95,11 +94,11 @@ def upper_envelope(lines):
 			if p is not None:
 				point = check_intersect(line, p)
 				if point is not None and point[0] > x:
-					event_queue.put((point[0], point[1], 1, (p, line)))
+					heapq.heappush(event_queue, (point[0], point[1], 1, (p, line)))
 			if n is not None:
 				point = check_intersect(line, n)
 				if point is not None and point[0] > x:
-					event_queue.put((point[0], point[1], 1, (line, n)))
+					heapq.heappush(event_queue, (point[0], point[1], 1, (line, n)))
 
 		elif event == 2:  # End
 			line = val
@@ -109,7 +108,7 @@ def upper_envelope(lines):
 			if p is not None and n is not None:
 				point = check_intersect(p, n)
 				if point is not None and point[0] > x:
-					event_queue.put((point[0], point[1], 1, (p, n)))
+					heapq.heappush(event_queue, (point[0], point[1], 1, (p, n)))
 
 		else:  # Intersect
 			p, n = val
@@ -119,11 +118,11 @@ def upper_envelope(lines):
 			if p2 is not None:
 				point = check_intersect(p2, n)
 				if point is not None and point[0] > x:
-					event_queue.put((point[0], point[1], 1, (p2, n)))
+					heapq.heappush(event_queue, (point[0], point[1], 1, (p2, n)))
 			if n2 is not None:
 				point = check_intersect(p, n2)
 				if point is not None and point[0] > x:
-					event_queue.put((point[0], point[1], 1, (p, n2)))
+					heapq.heappush(event_queue, (point[0], point[1], 1, (p, n2)))
 
 		if last_x < x:
 			top_list.append((x, tree.top()))
