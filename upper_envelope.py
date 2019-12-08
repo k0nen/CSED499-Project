@@ -1,5 +1,5 @@
 # Input: n segments of slope 1, -1, 0 each (x1, y1, x2, y2)
-# Output: upper envelope
+# Output: Upper envelope
 
 import queue
 import matplotlib.pyplot as plt
@@ -11,40 +11,14 @@ def x_to_y(_l, _x):
 
 
 def larger(i1, i2, x):
-	return x_to_y(i1, x) > x_to_y(i2, x)
-
-
-class BST:
-	def __init__(self, line_list):
-		self.lines = line_list
-		self.tree = []
-
-	def insert(self, idx, x):
-		i = 0
-		while i < len(self.tree) and larger(self.lines[idx], self.lines[i], x):
-			i += 1
-		self.tree.insert(i, idx)
-
-	def remove(self, idx):
-		self.tree.remove(idx)
-
-	def prev(self, idx):
-		i = self.tree.index(idx)
-		return i-1 if i > 0 else None
-
-	def next(self, idx):
-		i = self.tree.index(idx)
-		return i+1 if i+1 < len(self.tree) else None
-
-	def swap(self, i1, i2, x):
-		j1, j2 = self.tree.index(i1), self.tree.index(i2)
-		self.tree[j1], self.tree[j2] = self.tree[j2], self.tree[j1]
-
-	def top(self):
-		if len(self.tree) == 0:
-			return None
-		else:
-			return self.tree[-1]
+	y1 = x_to_y(i1, x)
+	y2 = x_to_y(i2, x)
+	if y1 != y2:
+		return y1 > y2
+	else:
+		a1, b1, a2, b2 = i1
+		a3, b3, a4, b4 = i2
+		return (b2 - b1) / (a2 - a1) > (b4 - b3) / (a4 - a3)
 
 
 def check_intersect(l1, l2):
@@ -55,72 +29,101 @@ def check_intersect(l1, l2):
 
 	x1, y1, x2, y2 = l1
 	a1, b1, a2, b2 = l2
-	xdiff = (x1 - x2, a1 - a2)
-	ydiff = (y1 - y2, b1 - b2)
-	div = det(xdiff, ydiff)
+	x_diff = (x1 - x2, a1 - a2)
+	y_diff = (y1 - y2, b1 - b2)
+	div = det(x_diff, y_diff)
 	if div == 0:
-		return False, None
+		return None
 	else:
 		d = (x1 * y2 - x2 * y1, a1 * b2 - a2 * b1)
-		x = det(d, xdiff) / div
-		# y = det(d, ydiff) / div
-		return True, x
+		x = det(d, x_diff) / div
+		y = det(d, y_diff) / div
+		return x, y
+
+
+class BST:
+	def __init__(self):
+		self.tree = []
+
+	def insert(self, l, x):
+		i = 0
+		while i < len(self.tree) and larger(l, self.tree[i], x):
+			i += 1
+		self.tree.insert(i, l)
+
+	def remove(self, l):
+		self.tree.remove(l)
+
+	def prev(self, l):
+		i = self.tree.index(l)
+		return self.tree[i-1] if i > 0 else None
+
+	def next(self, l):
+		i = self.tree.index(l)
+		return self.tree[i+1] if i + 1 < len(self.tree) else None
+
+	def swap(self, l1, l2):
+		i1, i2 = self.tree.index(l1), self.tree.index(l2)
+		self.tree[i1], self.tree[i2] = self.tree[i2], self.tree[i1]
+
+	def top(self):
+		return None if len(self.tree) == 0 else self.tree[-1]
 
 
 def upper_envelope(lines):
 	event_queue = queue.PriorityQueue()
 	lines = [[float(i) for i in j] for j in lines]
-	print(lines)
-	tree = BST(lines)
+	tree = BST()
 	top_list = []
 
-	for i, (x1, y1, x2, y2) in enumerate(lines):
-		event_queue.put((x1, 0, i))
-		event_queue.put((x2, 2, i))
+	# Create begin/end events
+	for x1, y1, x2, y2 in lines:
+		event_queue.put((x1, y1, 0, (x1, y1, x2, y2)))
+		event_queue.put((x2, y2, 2, (x1, y1, x2, y2)))
 
 	last_x = -100
 
 	while event_queue.qsize() > 0:
-		x, event, val = event_queue.get()
-		print('Event: {} {} {}'.format(x, event, val))
+		x, y, event, val = event_queue.get()
+		print(f'Event: ({x}, {y}), type {event}, {val} {tree.tree}')
 
 		if event == 0:  # Begin
-			line = lines[val]
-			tree.insert(val, x)
-			prv, nxt = tree.prev(val), tree.next(val)
+			line = val
+			tree.insert(line, x)
+			p, n = tree.prev(line), tree.prev(line)
 
-			if prv is not None:
-				is_intersect, x_intersect = check_intersect(line, lines[prv])
-				if is_intersect and x_intersect > x:
-					event_queue.put((x_intersect, 1, (prv, val)))
-			if nxt is not None:
-				is_intersect, x_intersect = check_intersect(line, lines[nxt])
-				if is_intersect and x_intersect > x:
-					event_queue.put((x_intersect, 1, (val, nxt)))
+			if p is not None:
+				point = check_intersect(line, p)
+				if point is not None and point[0] > x:
+					event_queue.put((point[0], point[1], 1, (p, line)))
+			if n is not None:
+				point = check_intersect(line, n)
+				if point is not None and point[0] > x:
+					event_queue.put((point[0], point[1], 1, (line, n)))
 
 		elif event == 2:  # End
-			prv, nxt = tree.prev(val), tree.next(val)
-			tree.remove(val)
+			line = val
+			p, n = tree.prev(line), tree.next(line)
+			tree.remove(line)
 
-			if prv is not None and nxt is not None:
-				is_intersect, x_intersect = check_intersect(lines[prv], lines[nxt])
-				if is_intersect and x_intersect > x:
-					event_queue.put((x_intersect, 1, (prv, nxt)))
+			if p is not None and n is not None:
+				point = check_intersect(p, n)
+				if point is not None and point[0] > x:
+					event_queue.put((point[0], point[1], 1, (p, n)))
 
 		else:  # Intersect
-			prv, nxt = val
-			print(prv, nxt, x)
-			tree.swap(prv, nxt, x)
+			p, n = val
+			tree.swap(p, n)
+			p2, n2 = tree.prev(p), tree.next(n)
 
-			prv2, nxt2 = tree.prev(nxt), tree.next(prv)
-			if prv2 is not None:
-				is_intersect, x_intersect = check_intersect(lines[prv2], lines[nxt])
-				if is_intersect and x_intersect > x:
-					event_queue.put((x_intersect, 1, (prv2, nxt)))
-			if nxt2 is not None:
-				is_intersect, x_intersect = check_intersect(lines[prv], lines[nxt2])
-				if is_intersect and x_intersect > x:
-					event_queue.put((x_intersect, 1, (prv, nxt2)))
+			if p2 is not None:
+				point = check_intersect(p2, n)
+				if point is not None and point[0] > x:
+					event_queue.put((point[0], point[1], 1, (p2, n)))
+			if n2 is not None:
+				point = check_intersect(p, n2)
+				if point is not None and point[0] > x:
+					event_queue.put((point[0], point[1], 1, (p, n2)))
 
 		if last_x < x:
 			top_list.append((x, tree.top()))
@@ -132,12 +135,11 @@ def upper_envelope(lines):
 
 
 if __name__ == '__main__':
-	lines = [(0, 0, 3, 3), (2, 3, 5, 0), (1, 2, 4, 2), (3, 2, 4.5, 2)]
+	lines = [(0, 0, 3, 3), (0, 0, 6, 0), (0, 0, 10, -10)]
 	top_hull = upper_envelope(lines)
 	print(top_hull)
 	for i in range(len(top_hull) - 1):
 		x1, l1 = top_hull[i]
 		x2, l2 = top_hull[i+1]
-		line = lines[l1]
-		plt.plot([x1, x2], [x_to_y(line, x1), x_to_y(line, x2)])
+		plt.plot([x1, x2], [x_to_y(l1, x1), x_to_y(l1, x2)])
 	plt.show()
